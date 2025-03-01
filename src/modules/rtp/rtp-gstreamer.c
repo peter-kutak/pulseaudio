@@ -599,6 +599,7 @@ int pa_rtp_recv(pa_rtp_context *c, pa_memchunk *chunk, pa_mempool *pool, uint32_
     GstBuffer *buf;
     GstMapInfo info;
     GstClockTime timestamp = GST_CLOCK_TIME_NONE;
+    bool timestamp_is_wallclock = false;
     uint8_t *data;
     uint64_t data_len = 0;
 
@@ -622,9 +623,10 @@ int pa_rtp_recv(pa_rtp_context *c, pa_memchunk *chunk, pa_mempool *pool, uint32_
             /* Use the meta if we were able to insert it and it came through,
              * else try to fallback to the DTS, which is only available in
              * GStreamer 1.16 and earlier. */
-            if (meta)
+            if (meta) {
                 timestamp = meta->timestamp;
-            else if (GST_BUFFER_DTS(buf) != GST_CLOCK_TIME_NONE)
+                timestamp_is_wallclock = true;
+            } else if (GST_BUFFER_DTS(buf) != GST_CLOCK_TIME_NONE)
                 timestamp = GST_BUFFER_DTS(buf);
             else
                 timestamp = 0;
@@ -684,7 +686,11 @@ int pa_rtp_recv(pa_rtp_context *c, pa_memchunk *chunk, pa_mempool *pool, uint32_
      * wraparound-corrected. */
     *rtp_tstamp = gst_util_uint64_scale_int(GST_BUFFER_PTS(gst_buffer_list_get(buf_list, 0)), c->ss.rate, GST_SECOND) & 0xFFFFFFFFU;
     if (timestamp != GST_CLOCK_TIME_NONE)
-        pa_timeval_rtstore(tstamp, timestamp / PA_NSEC_PER_USEC, false);
+        if (timestamp_is_wallclock) {
+            pa_timeval_store(tstamp, timestamp / PA_NSEC_PER_USEC);
+        } else {
+            pa_timeval_rtstore(tstamp, timestamp / PA_NSEC_PER_USEC, false);
+        }
 
     if (c->first_buffer) {
         c->first_buffer = false;
