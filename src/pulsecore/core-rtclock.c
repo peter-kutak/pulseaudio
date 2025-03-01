@@ -249,6 +249,16 @@ static struct timeval* wallclock_from_rtclock(struct timeval *tv) {
     return tv;
 }
 
+/**
+ * Stores RTC timestamp v in timeval structure tv.
+ * @param tv      pointer to target timeval struct, where will be the timestamp stored
+ * @param v       input timestamp to be stored, RTC value in microseconds resolution
+ * @param rtclock stored timeval sould be RTC or Wallclock
+ *                true  - stored tv will be marked by flag PA_TIMEVAL_RTCLOCK
+ *                false - stored tv will be converted to Wallclock 
+ * @return        pointer to stored timeval structure
+ *                NULL if timestamp is invalid
+ */
 struct timeval* pa_timeval_rtstore(struct timeval *tv, pa_usec_t v, bool rtclock) {
     pa_assert(tv);
 
